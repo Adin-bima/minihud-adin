@@ -4,9 +4,11 @@ plugins {
 }
 
 repositories {
-//	maven {url = "https://masa.dy.fi/maven/sakura-ryoko"
-//		content {includeGroupAndSubgroups("fi.dy.masa")}
-//	}
+	// Optional: put malilib jar+pom in libs/maven/com/github/sakura-ryoko/malilib/4e0577ada6/ to avoid JitPack timeouts
+	maven { url = layout.projectDirectory.dir("libs/maven") }
+	maven { url = "https://masa.dy.fi/maven/sakura-ryoko"
+		content { includeGroupAndSubgroups("fi.dy.masa") }
+	}
 	maven {url = 'https://maven.fallenbreath.me/releases'
 		content {includeGroupAndSubgroups("me.fallenbreath")}
 	}
@@ -25,11 +27,16 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
 	implementation "com.google.code.findbugs:jsr305:3.0.2"
 
-	//modImplementation "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version_out}:${project.malilib_version}"
-	modImplementation "com.github.sakura-ryoko:malilib:${project.malilib_version}"
+	// Use locally built malilib if present, otherwise JitPack
+	def malilibJar = file("${projectDir}/../malilib/build/libs/malilib-fabric-1.21.11-0.27.7-sakura.5.jar")
+	if (malilibJar.exists()) {
+		modImplementation files(malilibJar)
+	} else {
+		modImplementation "com.github.sakura-ryoko:malilib:${project.malilib_version}"
+	}
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	//modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Fabric API (required for ClientPlayNetworking in Servux handlers)
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	include(implementation("me.fallenbreath:conditional-mixin-fabric:${project.conditionalmixin_version}"))
 
 	modCompileOnly "com.terraformersmc:modmenu:${project.mod_menu_version}"

@@ -21,27 +21,41 @@ import fi.dy.masa.minihud.config.InfoToggle;
 import fi.dy.masa.minihud.config.RendererToggle;
 import fi.dy.masa.minihud.config.StructureToggle;
 
-public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
-{
-    // If you have an add-on mod, you can append stuff to these GUI lists by re-assigning a new list to it.
-    // I'd recommend using your own config handler for the config serialization to/from config files.
-    // Although the config dirty marking stuff probably is a mess in this old malilib code base for that stuff...
+public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab {
+    // If you have an add-on mod, you can append stuff to these GUI lists by
+    // re-assigning a new list to it.
+    // I'd recommend using your own config handler for the config serialization
+    // to/from config files.
+    // Although the config dirty marking stuff probably is a mess in this old
+    // malilib code base for that stuff...
     public static ImmutableList<RendererToggle> RENDERER_LIST = RendererToggle.VALUES;
     public static ImmutableList<InfoToggle> INFO_LINE_LIST = InfoToggle.VALUES;
 
     public static ConfigGuiTab tab = ConfigGuiTab.INFO_LINES;
 
-    public GuiConfigs()
-    {
+    public GuiConfigs() {
         super(10, 50, Reference.MOD_ID, null, "minihud.gui.title.configs", String.format("%s", Reference.MOD_VERSION));
     }
 
     @Override
-    public void initGui()
-    {
-        if (GuiConfigs.tab == ConfigGuiTab.SHAPES)
-        {
+    public void initGui() {
+        if (GuiConfigs.tab == ConfigGuiTab.SHAPES) {
             GuiBase.openGui(new GuiShapeManager());
+            return;
+        }
+        if (GuiConfigs.tab == ConfigGuiTab.BLOCK_HIGHLIGHTER) {
+            if (fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible()) {
+                GuiBase.openGui(new GuiBlockHighlighter());
+                return;
+            }
+            GuiConfigs.tab = ConfigGuiTab.INFO_LINES;
+        }
+        if (GuiConfigs.tab == ConfigGuiTab.MOB_HIGHLIGHTER) {
+            GuiBase.openGui(new GuiMobHighlighter());
+            return;
+        }
+        if (GuiConfigs.tab == ConfigGuiTab.PLAYER_HIGHLIGHTER) {
+            GuiBase.openGui(new GuiPlayerHighlighter());
             return;
         }
 
@@ -52,13 +66,14 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
         int y = 26;
         int rows = 1;
 
-        for (ConfigGuiTab tab : ConfigGuiTab.values())
-        {
-            if (!this.useAllTab() && tab == ConfigGuiTab.ALL) continue;
+        for (ConfigGuiTab tab : ConfigGuiTab.values()) {
+            if (!this.useAllTab() && tab == ConfigGuiTab.ALL)
+                continue;
+            if (tab == ConfigGuiTab.BLOCK_HIGHLIGHTER && !fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible())
+                continue;
             int width = this.getStringWidth(tab.getDisplayName()) + 10;
 
-            if (x >= this.getScreenWidth() - width - 10)
-            {
+            if (x >= this.getScreenWidth() - width - 10) {
                 x = 10;
                 y += 22;
                 rows++;
@@ -67,8 +82,7 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
             x += this.createButton(x, y, width, tab);
         }
 
-        if (rows > 1)
-        {
+        if (rows > 1) {
             int scrollbarPosition = this.getListWidget().getScrollbar().getValue();
             this.setListPosition(this.getListX(), 50 + (rows - 1) * 22);
             this.reCreateListWidget();
@@ -77,8 +91,7 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
         }
     }
 
-    private int createButton(int x, int y, int width, ConfigGuiTab tab)
-    {
+    private int createButton(int x, int y, int width, ConfigGuiTab tab) {
         ButtonGeneric button = new ButtonGeneric(x, y, width, 20, tab.getDisplayName());
         button.setEnabled(GuiConfigs.tab != tab);
         this.addButton(button, new ButtonListenerConfigTabs(tab, this));
@@ -87,22 +100,16 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
     }
 
     @Override
-    protected int getConfigWidth()
-    {
+    protected int getConfigWidth() {
         ConfigGuiTab tab = GuiConfigs.tab;
 
-        if (tab == ConfigGuiTab.GENERIC)
-        {
+        if (tab == ConfigGuiTab.GENERIC) {
             return 200;
-        }
-        else if (tab == ConfigGuiTab.INFO_LINES ||
-                 tab == ConfigGuiTab.STRUCTURES ||
-                 tab == ConfigGuiTab.RENDERERS)
-        {
+        } else if (tab == ConfigGuiTab.INFO_LINES ||
+                tab == ConfigGuiTab.STRUCTURES ||
+                tab == ConfigGuiTab.RENDERERS) {
             return 260;
-        }
-        else if (tab == ConfigGuiTab.COLORS)
-        {
+        } else if (tab == ConfigGuiTab.COLORS) {
             return 100;
         }
 
@@ -110,47 +117,34 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
     }
 
     @Override
-    protected boolean useKeybindSearch()
-    {
+    protected boolean useKeybindSearch() {
         return GuiConfigs.tab != ConfigGuiTab.COLORS;
     }
 
     @Override
-    public List<ConfigOptionWrapper> getConfigs()
-    {
+    public List<ConfigOptionWrapper> getConfigs() {
         ConfigGuiTab tab = GuiConfigs.tab;
 
-        if (tab == ConfigGuiTab.ALL && this.useAllTab())
-        {
+        if (tab == ConfigGuiTab.ALL && this.useAllTab()) {
             return this.getAllConfigs();
-        }
-        else if (tab == ConfigGuiTab.GENERIC)
-        {
+        } else if (tab == ConfigGuiTab.GENERIC) {
             return ConfigOptionWrapper.createFor(Configs.Generic.OPTIONS);
-        }
-        else if (tab == ConfigGuiTab.COLORS)
-        {
+        } else if (tab == ConfigGuiTab.COLORS) {
             return ConfigOptionWrapper.createFor(Configs.Colors.OPTIONS);
-        }
-        else if (tab == ConfigGuiTab.INFO_LINES)
-        {
+        } else if (tab == ConfigGuiTab.INFO_LINES) {
             List<IConfigBase> list = new ArrayList<>();
             list.add(Configs.Generic.MAIN_RENDERING_TOGGLE);
             list.addAll(INFO_LINE_LIST.stream().map(this::wrapConfig).toList());
             list.addAll(ConfigUtils.createConfigWrapperForType(ConfigType.INTEGER, INFO_LINE_LIST));
             return ConfigOptionWrapper.createFor(list);
-        }
-        else if (tab == ConfigGuiTab.STRUCTURES)
-        {
+        } else if (tab == ConfigGuiTab.STRUCTURES) {
             List<IConfigBase> list = new ArrayList<>();
             list.add(Configs.Generic.MAIN_RENDERING_TOGGLE);
             list.add(this.wrapConfig(RendererToggle.OVERLAY_STRUCTURE_MAIN_TOGGLE));
             list.addAll(StructureToggle.VALUES.stream().map(this::wrapConfig).toList());
             list.addAll(StructureToggle.COLOR_CONFIGS);
             return ConfigOptionWrapper.createFor(list);
-        }
-        else if (tab == ConfigGuiTab.RENDERERS)
-        {
+        } else if (tab == ConfigGuiTab.RENDERERS) {
             List<IConfigBase> list = new ArrayList<>();
             list.add(Configs.Generic.MAIN_RENDERING_TOGGLE);
             list.addAll(RENDERER_LIST.stream().map(this::wrapConfig).toList());
@@ -161,14 +155,12 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
     }
 
     @Override
-    public boolean useAllTab()
-    {
+    public boolean useAllTab() {
         return true;
     }
 
     @Override
-    public List<ConfigOptionWrapper> getAllConfigs()
-    {
+    public List<ConfigOptionWrapper> getAllConfigs() {
         List<ConfigOptionWrapper> configs = new ArrayList<>();
 
         configs.addAll(ConfigOptionWrapper.createFor(Configs.Generic.OPTIONS));
@@ -190,37 +182,35 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
         return configs;
     }
 
-    protected BooleanHotkeyGuiWrapper wrapConfig(InfoToggle config)
-    {
+    protected BooleanHotkeyGuiWrapper wrapConfig(InfoToggle config) {
         return new BooleanHotkeyGuiWrapper(config.getName(), config, config.getKeybind());
     }
 
-    protected BooleanHotkeyGuiWrapper wrapConfig(RendererToggle config)
-    {
+    protected BooleanHotkeyGuiWrapper wrapConfig(RendererToggle config) {
         return new BooleanHotkeyGuiWrapper(config.getName(), config, config.getKeybind());
     }
 
-    protected BooleanHotkeyGuiWrapper wrapConfig(StructureToggle config)
-    {
-        return new BooleanHotkeyGuiWrapper(config.getToggleOption().getName(), config.getToggleOption(), config.getHotkey().getKeybind());
+    protected BooleanHotkeyGuiWrapper wrapConfig(StructureToggle config) {
+        return new BooleanHotkeyGuiWrapper(config.getToggleOption().getName(), config.getToggleOption(),
+                config.getHotkey().getKeybind());
     }
 
-    private record ButtonListenerConfigTabs(ConfigGuiTab tab, GuiConfigs parent) implements IButtonActionListener
-    {
+    private record ButtonListenerConfigTabs(ConfigGuiTab tab, GuiConfigs parent) implements IButtonActionListener {
         @Override
-        public void actionPerformedWithButton(ButtonBase button, int mouseButton)
-        {
+        public void actionPerformedWithButton(ButtonBase button, int mouseButton) {
             GuiConfigs.tab = this.tab;
 
-            if (this.tab == ConfigGuiTab.SHAPES)
-            {
+            if (this.tab == ConfigGuiTab.SHAPES) {
                 GuiBase.openGui(new GuiShapeManager());
-            }
-            else
-            {
+            } else             if (this.tab == ConfigGuiTab.BLOCK_HIGHLIGHTER && fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible()) {
+                GuiBase.openGui(new GuiBlockHighlighter());
+            } else if (this.tab == ConfigGuiTab.MOB_HIGHLIGHTER) {
+                GuiBase.openGui(new GuiMobHighlighter());
+            } else if (this.tab == ConfigGuiTab.PLAYER_HIGHLIGHTER) {
+                GuiBase.openGui(new GuiPlayerHighlighter());
+            } else {
                 this.parent.reCreateListWidget(); // apply the new config width
-                if (this.parent.getListWidget() != null)
-                {
+                if (this.parent.getListWidget() != null) {
                     this.parent.getListWidget().resetScrollbarPosition();
                 }
                 this.parent.initGui();
@@ -228,25 +218,25 @@ public class GuiConfigs extends GuiConfigsBase implements IConfigGuiAllTab
         }
     }
 
-    public enum ConfigGuiTab
-    {
-        ALL                 (IConfigGuiAllTab.getTranslationKey()),
-        GENERIC             ("minihud.gui.button.config_gui.generic"),
-        COLORS              ("minihud.gui.button.config_gui.colors"),
-        INFO_LINES          ("minihud.gui.button.config_gui.info_lines"),
-        STRUCTURES          ("minihud.gui.button.config_gui.structures"),
-        RENDERERS           ("minihud.gui.button.config_gui.renderers"),
-        SHAPES              ("minihud.gui.button.config_gui.shapes");
+    public enum ConfigGuiTab {
+        ALL(IConfigGuiAllTab.getTranslationKey()),
+        GENERIC("minihud.gui.button.config_gui.generic"),
+        COLORS("minihud.gui.button.config_gui.colors"),
+        INFO_LINES("minihud.gui.button.config_gui.info_lines"),
+        STRUCTURES("minihud.gui.button.config_gui.structures"),
+        RENDERERS("minihud.gui.button.config_gui.renderers"),
+        SHAPES("minihud.gui.button.config_gui.shapes"),
+        BLOCK_HIGHLIGHTER("minihud.gui.button.config_gui.block_highlighter"),
+        MOB_HIGHLIGHTER("minihud.gui.button.config_gui.mob_highlighter"),
+        PLAYER_HIGHLIGHTER("minihud.gui.button.config_gui.player_highlighter");
 
         private final String translationKey;
 
-        ConfigGuiTab(String translationKey)
-        {
+        ConfigGuiTab(String translationKey) {
             this.translationKey = translationKey;
         }
 
-        public String getDisplayName()
-        {
+        public String getDisplayName() {
             return StringUtils.translate(this.translationKey);
         }
     }

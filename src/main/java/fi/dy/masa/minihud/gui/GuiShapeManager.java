@@ -74,6 +74,8 @@ public class GuiShapeManager extends GuiListBase<ShapeBase, WidgetShapeEntry, Wi
 
         for (ConfigGuiTab tab : ConfigGuiTab.values())
         {
+            if (tab == ConfigGuiTab.BLOCK_HIGHLIGHTER && !fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible())
+                continue;
             int width = this.getStringWidth(tab.getDisplayName()) + 10;
 
             if (x >= this.getScreenWidth() - width - 10)

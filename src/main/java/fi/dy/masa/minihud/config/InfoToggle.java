@@ -48,11 +48,13 @@ public enum InfoToggle implements IConfigInteger, IEnumBooleanHotkey
     // Player
     BLOCK_BREAK_SPEED       ("infoBlockBreakSpeed",         InfoLineTypes.BLOCK_BREAK_SPEED, false, ""),
     PLAYER_EXPERIENCE       ("infoPlayerExperience",        InfoLineTypes.PLAYER_EXP, false, ""),
+    LAST_DEATH_COORDINATE   ("infoLastDeathCoordinate",     InfoLineTypes.LAST_DEATH_COORDINATE, false, ""),
     SPEED                   ("infoSpeed",                   InfoLineTypes.SPEED, false, ""),
     SPEED_AXIS              ("infoSpeedAxis",               InfoLineTypes.SPEED_AXIS, false, ""),
     SPEED_HV                ("infoSpeedHV",                 InfoLineTypes.SPEED_HV, false, ""),
     SPRINTING               ("infoSprinting",               InfoLineTypes.SPRINTING, false, ""),
     SCULK_WARNING_LEVEL     ("infoSculkWarningLevel",       InfoLineTypes.SCULK_WARNING_LEVEL, false, true, ""),
+    PLAYER_EFFECTS          ("infoPlayerEffects",            InfoLineTypes.PLAYER_EFFECTS, false, ""),
 
     // Server
     SERVER_TPS              ("infoServerTPS",               InfoLineTypes.SERVER_TPS, false, ""),

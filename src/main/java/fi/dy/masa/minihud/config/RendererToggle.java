@@ -36,6 +36,9 @@ public enum RendererToggle implements IEnumBooleanHotkey
     OVERLAY_SPAWN_CHUNK_OVERLAY_PLAYER  ("overlaySpawnChunkPlayer",     ""),
     OVERLAY_STRUCTURE_MAIN_TOGGLE       ("overlayStructureMainToggle",  true, ""),
     OVERLAY_VILLAGER_INFO               ("overlayVillagerInfo",         true, ""),
+    OVERLAY_BLOCK_HIGHLIGHTER           ("overlayBlockHighlighter",     true, ""),
+    OVERLAY_MOB_HIGHLIGHTER             ("overlayMobHighlighter",       true, ""),
+    OVERLAY_PLAYER_HIGHLIGHTER           ("overlayPlayerHighlighter",    true, ""),
     SHAPE_RENDERER                      ("shapeRenderer",               ""),
 
 	// Does not need server side data

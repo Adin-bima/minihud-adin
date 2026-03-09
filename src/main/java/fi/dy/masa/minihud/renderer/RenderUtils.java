@@ -186,6 +186,18 @@ public class RenderUtils
 		fi.dy.masa.malilib.render.RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, color, lineWidth, bufferQuads);
 	}
 
+	/** Draw outline of an AABB (e.g. entity bounding box) in camera-relative space. */
+	public static void drawBoxOutlinesAabb(AABB aabb, Vec3 cameraPos, Color4f color, float lineWidth,
+			BufferBuilder buffer) {
+		float minX = (float) (aabb.minX - cameraPos.x);
+		float minY = (float) (aabb.minY - cameraPos.y);
+		float minZ = (float) (aabb.minZ - cameraPos.z);
+		float maxX = (float) (aabb.maxX - cameraPos.x);
+		float maxY = (float) (aabb.maxY - cameraPos.y);
+		float maxZ = (float) (aabb.maxZ - cameraPos.z);
+		fi.dy.masa.malilib.render.RenderUtils.drawBoxAllEdgesBatchedLines(minX, minY, minZ, maxX, maxY, maxZ, color, lineWidth, buffer);
+	}
+
 	/**
      * Assumes a BufferBuilder in GL_QUADS mode has been initialized
      */

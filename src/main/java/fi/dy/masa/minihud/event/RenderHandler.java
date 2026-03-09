@@ -1532,6 +1532,34 @@ public class RenderHandler implements IRenderer
 		        return;
 	        }
         }
+        else if (type == InfoToggle.LAST_DEATH_COORDINATE)
+        {
+            InfoLine parser = type.initParser();
+
+            if (parser != null && mc.player != null)
+            {
+                InfoLineContext ctx = new InfoLineContext(world, mc.player, null, null, null, null, null);
+                this.processEntries(parser.parse(ctx));
+            }
+            else
+            {
+                return;
+            }
+        }
+        else if (type == InfoToggle.PLAYER_EFFECTS)
+        {
+            InfoLine parser = type.initParser();
+
+            if (parser != null && mc.player != null)
+            {
+                InfoLineContext ctx = new InfoLineContext(world, mc.player, null, null, null, null, null);
+                this.processEntries(parser.parse(ctx));
+            }
+            else
+            {
+                return;
+            }
+        }
         else if (type == InfoToggle.LOOKING_AT_PLAYER_EXP)
         {
             InfoLine parser = type.initParser();

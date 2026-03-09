@@ -20,14 +20,17 @@ import fi.dy.masa.minihud.MiniHUD;
 import fi.dy.masa.minihud.config.Configs;
 import fi.dy.masa.minihud.config.RendererToggle;
 
-public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
-{
-    public static final OverlayRendererRandomTickableChunks INSTANCE_FIXED = new OverlayRendererRandomTickableChunks(RendererToggle.OVERLAY_RANDOM_TICKS_FIXED);
-    public static final OverlayRendererRandomTickableChunks INSTANCE_PLAYER = new OverlayRendererRandomTickableChunks(RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER);
+public class OverlayRendererRandomTickableChunks extends OverlayRendererBase {
+    public static final OverlayRendererRandomTickableChunks INSTANCE_FIXED = new OverlayRendererRandomTickableChunks(
+            RendererToggle.OVERLAY_RANDOM_TICKS_FIXED);
+    public static final OverlayRendererRandomTickableChunks INSTANCE_PLAYER = new OverlayRendererRandomTickableChunks(
+            RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER);
 
-    private static final Direction[] HORIZONTALS = new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST };
+    private static final Direction[] HORIZONTALS = new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.WEST,
+            Direction.EAST };
     protected boolean needsUpdate = true;
-    @Nullable public Vec3 newPos;
+    @Nullable
+    public Vec3 newPos;
 
     protected RendererToggle toggle;
     protected Vec3 pos = Vec3.ZERO;
@@ -40,8 +43,7 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     private Entity cameraEntity;
     private boolean hasData;
 
-    protected OverlayRendererRandomTickableChunks(RendererToggle toggle)
-    {
+    protected OverlayRendererRandomTickableChunks(RendererToggle toggle) {
         this.toggle = toggle;
         this.useCulling = false;
         this.renderThrough = false;
@@ -51,42 +53,34 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     }
 
     @Override
-    public String getName()
-    {
+    public String getName() {
         return "RandomTickableChunks";
     }
 
-    public void setNeedsUpdate()
-    {
+    public void setNeedsUpdate() {
         this.needsUpdate = true;
     }
 
-    public void setNewPos(@Nullable Vec3 pos)
-    {
+    public void setNewPos(@Nullable Vec3 pos) {
         this.newPos = pos;
     }
 
     @Override
-    public boolean shouldRender(Minecraft mc)
-    {
+    public boolean shouldRender(Minecraft mc) {
         return this.toggle.getBooleanValue();
     }
 
     @Override
-    public boolean needsUpdate(Entity entity, Minecraft mc)
-    {
-        if (this.needsUpdate)
-        {
+    public boolean needsUpdate(Entity entity, Minecraft mc) {
+        if (this.needsUpdate) {
             return true;
         }
 
-        if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_FIXED)
-        {
+        if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_FIXED) {
             return this.newPos != null;
         }
         // Player-following renderer
-        else if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER)
-        {
+        else if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER) {
             return entity.getX() != this.pos.x || entity.getZ() != this.pos.z;
         }
 
@@ -94,14 +88,10 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     }
 
     @Override
-    public void update(Vec3 cameraPos, Entity entity, Minecraft mc, ProfilerFiller profiler)
-    {
-        if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER)
-        {
+    public void update(Vec3 cameraPos, Entity entity, Minecraft mc, ProfilerFiller profiler) {
+        if (this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER) {
             this.pos = entity.position();
-        }
-        else if (this.newPos != null)
-        {
+        } else if (this.newPos != null) {
             this.pos = this.newPos;
             this.newPos = null;
         }
@@ -110,36 +100,30 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
         Set<ChunkPos> chunks = this.getRandomTickableChunks(this.pos);
         this.cameraEntity = entity;
 
-        for (ChunkPos pos : chunks)
-        {
-//            this.calculateChunkEdgesIfApplicable(pos, chunks, entity.getEntityWorld());
+        for (ChunkPos pos : chunks) {
+            // this.calculateChunkEdgesIfApplicable(pos, chunks, entity.getEntityWorld());
 
             List<AABB> boxes = new ArrayList<>();
 
-            for (Direction side : HORIZONTALS)
-            {
+            for (Direction side : HORIZONTALS) {
                 ChunkPos posAdj = new ChunkPos(pos.x + side.getStepX(), pos.z + side.getStepZ());
 
-                if (!chunks.contains(posAdj))
-                {
+                if (!chunks.contains(posAdj)) {
                     AABB bb = this.calculateChunkEdge(pos, side, entity.level());
 
-                    if (bb != null)
-                    {
+                    if (bb != null) {
                         boxes.add(bb);
                     }
                 }
             }
 
-            if (!boxes.isEmpty())
-            {
+            if (!boxes.isEmpty()) {
                 this.chunkMap.put(pos, boxes);
                 this.hasData = true;
             }
         }
 
-        if (this.hasData())
-        {
+        if (this.hasData()) {
             this.render(cameraPos, mc, profiler);
         }
 
@@ -147,169 +131,148 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     }
 
     @Override
-    public boolean hasData()
-    {
+    public boolean hasData() {
         return this.hasData && !this.chunkMap.isEmpty() && this.cameraEntity != null;
     }
 
     @Override
-    public void render(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler)
-    {
+    public void render(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler) {
         this.allocateBuffers();
         this.renderQuads(cameraPos, mc, profiler);
         this.renderOutlines(cameraPos, mc, profiler);
     }
 
-    private void renderQuads(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler)
-    {
-        if (mc.level == null || mc.player == null)
-        {
+    private void renderQuads(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler) {
+        if (mc.level == null || mc.player == null) {
             return;
         }
 
         profiler.push("random_tick_quads");
-        final Color4f color = this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER ?
-                              Configs.Colors.RANDOM_TICKS_PLAYER_OVERLAY_COLOR.getColor() :
-                              Configs.Colors.RANDOM_TICKS_FIXED_OVERLAY_COLOR.getColor();
+        final Color4f color = this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER
+                ? Configs.Colors.RANDOM_TICKS_PLAYER_OVERLAY_COLOR.getColor()
+                : Configs.Colors.RANDOM_TICKS_FIXED_OVERLAY_COLOR.getColor();
 
         RenderObjectVbo ctx = this.renderObjects.getFirst();
-        BufferBuilder builder = ctx.start(() -> "minihud:random_tick/quads", MaLiLibPipelines.MINIHUD_SHAPE_OFFSET_NO_CULL);
+        BufferBuilder builder = ctx.start(() -> "minihud:random_tick/quads",
+                MaLiLibPipelines.MINIHUD_SHAPE_OFFSET_NO_CULL);
 
         this.chunkMap.forEach(
-                (pos, boxes) ->
-                {
-                    for (AABB bb : boxes)
-                    {
+                (pos, boxes) -> {
+                    for (AABB bb : boxes) {
                         RenderUtils.renderWallQuads(bb, cameraPos, color, builder);
                     }
                 });
 
-        try
-        {
+        try {
             MeshData meshData = builder.build();
 
-            if (meshData != null)
-            {
+            if (meshData != null) {
                 ctx.upload(meshData, this.shouldResort);
 
-                if (this.shouldResort)
-                {
+                if (this.shouldResort) {
                     ctx.startResorting(meshData, ctx.createVertexSorter(cameraPos));
                 }
 
                 meshData.close();
             }
-        }
-        catch (Exception err)
-        {
+        } catch (Exception err) {
             MiniHUD.LOGGER.error("OverlayRendererRandomTickableChunks#renderQuads(): Exception; {}", err.getMessage());
         }
 
         profiler.pop();
     }
 
-    private void renderOutlines(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler)
-    {
-        if (mc.level == null || mc.player == null)
-        {
+    private void renderOutlines(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler) {
+        if (mc.level == null || mc.player == null) {
             return;
         }
 
         profiler.push("random_tick_outlines");
-        Color4f color = this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER ?
-                              Configs.Colors.RANDOM_TICKS_PLAYER_OVERLAY_COLOR.getColor() :
-                              Configs.Colors.RANDOM_TICKS_FIXED_OVERLAY_COLOR.getColor();
+        Color4f color = this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_PLAYER
+                ? Configs.Colors.RANDOM_TICKS_PLAYER_OVERLAY_COLOR.getColor()
+                : Configs.Colors.RANDOM_TICKS_FIXED_OVERLAY_COLOR.getColor();
 
         final Color4f colorSolid = Color4f.fromColor(color, 0xFF);
 
         RenderObjectVbo ctx = this.renderObjects.get(1);
-        BufferBuilder builder = ctx.start(() -> "minihud:random_tick/outlines", MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_LEQUAL_DEPTH);
+        BufferBuilder builder = ctx.start(() -> "minihud:random_tick/outlines",
+                MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_LEQUAL_DEPTH);
 
         this.chunkMap.forEach(
-                (pos, boxes) ->
-                {
-                    for (AABB bb : boxes)
-                    {
-                        RenderUtils.renderWallOutlines(bb, 16, 16, true, cameraPos, colorSolid, this.glLineWidth, builder);
+                (pos, boxes) -> {
+                    for (AABB bb : boxes) {
+                        RenderUtils.renderWallOutlines(bb, 16, 16, true, cameraPos, colorSolid, this.glLineWidth,
+                                builder);
                     }
                 });
 
-        try
-        {
+        try {
             MeshData meshData = builder.build();
 
-            if (meshData != null)
-            {
+            if (meshData != null) {
                 ctx.upload(meshData, false);
                 meshData.close();
             }
-        }
-        catch (Exception err)
-        {
-            MiniHUD.LOGGER.error("OverlayRendererRandomTickableChunks#renderOutlines(): Exception; {}", err.getMessage());
+        } catch (Exception err) {
+            MiniHUD.LOGGER.error("OverlayRendererRandomTickableChunks#renderOutlines(): Exception; {}",
+                    err.getMessage());
         }
 
         profiler.pop();
     }
 
     @Override
-    public void reset()
-    {
+    public void reset() {
         super.reset();
         this.chunkMap.clear();
         this.cameraEntity = null;
         this.hasData = false;
     }
 
-    protected Set<ChunkPos> getRandomTickableChunks(Vec3 posCenter)
-    {
+    protected Set<ChunkPos> getRandomTickableChunks(Vec3 posCenter) {
         Set<ChunkPos> set = new HashSet<>();
         final int centerChunkX = ((int) Math.floor(posCenter.x)) >> 4;
         final int centerChunkZ = ((int) Math.floor(posCenter.z)) >> 4;
         final double maxRange = 128D * 128D;
         final int r = 9;
 
-        for (int cz = centerChunkZ - r; cz <= centerChunkZ + r; ++cz)
-        {
-            for (int cx = centerChunkX - r; cx <= centerChunkX + r; ++cx)
-            {
+        for (int cz = centerChunkZ - r; cz <= centerChunkZ + r; ++cz) {
+            for (int cx = centerChunkX - r; cx <= centerChunkX + r; ++cx) {
                 double dx = (double) (cx * 16 + 8) - posCenter.x;
                 double dz = (double) (cz * 16 + 8) - posCenter.z;
 
-                if ((dx * dx + dz * dz) < maxRange)
-                {
+                if ((dx * dx + dz * dz) < maxRange) {
                     set.add(new ChunkPos(cx, cz));
                 }
             }
         }
 
-        if (!set.isEmpty())
-        {
+        if (!set.isEmpty()) {
             this.hasData = true;
         }
 
         return set;
     }
 
-//    protected void calculateChunkEdgesIfApplicable(ChunkPos pos, Set<ChunkPos> chunks, World world)
-//    {
-//        for (Direction side : HORIZONTALS)
-//        {
-//            ChunkPos posAdj = new ChunkPos(pos.x + side.getOffsetX(), pos.z + side.getOffsetZ());
-//
-//            if (!chunks.contains(posAdj))
-//            {
-//                this.calculateChunkEdge(pos, side, world);
-//            }
-//        }
-//    }
+    // protected void calculateChunkEdgesIfApplicable(ChunkPos pos, Set<ChunkPos>
+    // chunks, World world)
+    // {
+    // for (Direction side : HORIZONTALS)
+    // {
+    // ChunkPos posAdj = new ChunkPos(pos.x + side.getOffsetX(), pos.z +
+    // side.getOffsetZ());
+    //
+    // if (!chunks.contains(posAdj))
+    // {
+    // this.calculateChunkEdge(pos, side, world);
+    // }
+    // }
+    // }
 
-    private @Nullable AABB calculateChunkEdge(ChunkPos pos, Direction side, Level world)
-    {
+    private @Nullable AABB calculateChunkEdge(ChunkPos pos, Direction side, Level world) {
         float minX, minZ, maxX, maxZ;
 
-        switch (side)
-        {
+        switch (side) {
             case NORTH:
                 minX = (float) (pos.x << 4);
                 minZ = (float) (pos.z << 4);
@@ -345,19 +308,16 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     }
 
     @Override
-    public String getSaveId()
-    {
+    public String getSaveId() {
         return this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_FIXED ? "random_tickable_chunks" : "";
     }
 
     @Nullable
     @Override
-    public JsonObject toJson()
-    {
+    public JsonObject toJson() {
         JsonObject obj = new JsonObject();
 
-        if (!this.pos.equals(Vec3.ZERO))
-        {
+        if (!this.pos.equals(Vec3.ZERO)) {
             obj.add("pos", JsonUtils.vec3dToJson(this.pos));
         }
 
@@ -365,14 +325,11 @@ public class OverlayRendererRandomTickableChunks extends OverlayRendererBase
     }
 
     @Override
-    public void fromJson(JsonObject obj)
-    {
-        if (obj.has("pos"))
-        {
+    public void fromJson(JsonObject obj) {
+        if (obj.has("pos")) {
             Vec3 pos = JsonUtils.vec3dFromJson(obj, "pos");
 
-            if (pos != null && this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_FIXED)
-            {
+            if (pos != null && this.toggle == RendererToggle.OVERLAY_RANDOM_TICKS_FIXED) {
                 newPos = pos;
             }
         }
