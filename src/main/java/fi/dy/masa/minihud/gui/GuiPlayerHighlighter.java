@@ -38,10 +38,14 @@ public class GuiPlayerHighlighter extends GuiBase {
             b = e.getColorB();
             a = e.getColorA();
         }
-        if (rField != null) rField.setValueWrapper(String.valueOf(r));
-        if (gField != null) gField.setValueWrapper(String.valueOf(g));
-        if (bField != null) bField.setValueWrapper(String.valueOf(b));
-        if (aField != null) aField.setValueWrapper(String.valueOf(a));
+        if (rField != null)
+            rField.setValueWrapper(String.valueOf(r));
+        if (gField != null)
+            gField.setValueWrapper(String.valueOf(g));
+        if (bField != null)
+            bField.setValueWrapper(String.valueOf(b));
+        if (aField != null)
+            aField.setValueWrapper(String.valueOf(a));
     }
 
     private void syncColorFromFields() {
@@ -92,7 +96,8 @@ public class GuiPlayerHighlighter extends GuiBase {
         for (ConfigGuiTab tab : ConfigGuiTab.values()) {
             if (tab == ConfigGuiTab.ALL)
                 continue;
-            if (tab == ConfigGuiTab.BLOCK_HIGHLIGHTER && !fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible())
+            if (tab == ConfigGuiTab.BLOCK_HIGHLIGHTER
+                    && !fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.isBlockHighlighterVisible())
                 continue;
             int w = this.getStringWidth(tab.getDisplayName()) + 10;
             if (x >= this.getScreenWidth() - w - 10) {
@@ -116,7 +121,8 @@ public class GuiPlayerHighlighter extends GuiBase {
         y += 22;
 
         this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.gui.player_highlighter.distance"));
-        GuiTextFieldGeneric distanceField = new GuiTextFieldGeneric(x + 120, y - 2, 48, 16, Minecraft.getInstance().font);
+        GuiTextFieldGeneric distanceField = new GuiTextFieldGeneric(x + 120, y - 2, 48, 16,
+                Minecraft.getInstance().font);
         distanceField.setMaxLength(3);
         distanceField.setValueWrapper(String.valueOf(PlayerHighlighterConfigs.HIGHLIGHT_DISTANCE.getIntegerValue()));
         this.addTextField(distanceField, (tf) -> {
@@ -125,7 +131,8 @@ public class GuiPlayerHighlighter extends GuiBase {
                 v = Math.max(1, Math.min(128, v));
                 PlayerHighlighterConfigs.HIGHLIGHT_DISTANCE.setIntegerValue(v);
                 fi.dy.masa.minihud.renderer.OverlayRendererPlayerHighlighter.INSTANCE.invalidate();
-            } catch (NumberFormatException ignored) { }
+            } catch (NumberFormatException ignored) {
+            }
             return true;
         }, TextFieldType.INTEGER);
         y += 22;
@@ -149,11 +156,30 @@ public class GuiPlayerHighlighter extends GuiBase {
         aField.setMaxLength(3);
         fx += 42;
         refreshColorEditor();
-        this.addTextField(rField, (tf) -> { syncColorFromFields(); return true; }, TextFieldType.INTEGER);
-        this.addTextField(gField, (tf) -> { syncColorFromFields(); return true; }, TextFieldType.INTEGER);
-        this.addTextField(bField, (tf) -> { syncColorFromFields(); return true; }, TextFieldType.INTEGER);
-        this.addTextField(aField, (tf) -> { syncColorFromFields(); return true; }, TextFieldType.INTEGER);
+        this.addTextField(rField, (tf) -> {
+            syncColorFromFields();
+            return true;
+        }, TextFieldType.INTEGER);
+        this.addTextField(gField, (tf) -> {
+            syncColorFromFields();
+            return true;
+        }, TextFieldType.INTEGER);
+        this.addTextField(bField, (tf) -> {
+            syncColorFromFields();
+            return true;
+        }, TextFieldType.INTEGER);
+        this.addTextField(aField, (tf) -> {
+            syncColorFromFields();
+            return true;
+        }, TextFieldType.INTEGER);
         this.addWidget(new WidgetLiveColorSwatch(fx, y - 1, 20, 20));
+        fx += 23;
+        ButtonGeneric applyColorBtn = new ButtonGeneric(fx, y - 1, 50, 20,
+                StringUtils.translate("minihud.highlighter.gui.apply"));
+        this.addButton(applyColorBtn, (b, mb) -> {
+            syncColorFromFields();
+            fi.dy.masa.minihud.renderer.OverlayRendererPlayerHighlighter.INSTANCE.invalidate();
+        });
         y += 24;
 
         this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.gui.player_highlighter.entries"));
@@ -192,8 +218,10 @@ public class GuiPlayerHighlighter extends GuiBase {
                     StringUtils.translate("minihud.highlighter.gui.remove"));
             this.addButton(removeBtn, (b, mb) -> {
                 PlayerHighlighterConfigs.removeEntry(idx);
-                if (selectedEntryIndex == idx) selectedEntryIndex = -1;
-                else if (selectedEntryIndex > idx) selectedEntryIndex--;
+                if (selectedEntryIndex == idx)
+                    selectedEntryIndex = -1;
+                else if (selectedEntryIndex > idx)
+                    selectedEntryIndex--;
                 GuiBase.openGui(new GuiPlayerHighlighter());
             });
             y += 20;
@@ -222,7 +250,8 @@ public class GuiPlayerHighlighter extends GuiBase {
         try {
             int d = Integer.parseInt(distanceField.getValueWrapper(), 10);
             PlayerHighlighterConfigs.HIGHLIGHT_DISTANCE.setIntegerValue(Math.max(1, Math.min(128, d)));
-        } catch (NumberFormatException ignored) { }
+        } catch (NumberFormatException ignored) {
+        }
         List<PlayerEntry> entries = PlayerHighlighterConfigs.getEntries();
         for (int i = 0; i < entries.size() && i < playerNameFields.size(); i++) {
             String name = playerNameFields.get(i).getValueWrapper();

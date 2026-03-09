@@ -187,6 +187,12 @@ public class GuiBlockHighlighter extends GuiBase {
         }, TextFieldType.INTEGER);
         refreshColorEditor();
         this.addWidget(new WidgetLiveColorSwatch(fx, y - 1, 20, 20));
+        fx += 23;
+        ButtonGeneric applyColorBtn = new ButtonGeneric(fx, y - 1, 50, 20, StringUtils.translate("minihud.highlighter.gui.apply"));
+        this.addButton(applyColorBtn, (b, mb) -> {
+            syncColorFromFields();
+            fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.INSTANCE.invalidate();
+        });
         y += 24;
 
         // ---- Ores: per item = small toggle + plain name + swatch + Edit + fill +

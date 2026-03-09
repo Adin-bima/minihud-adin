@@ -867,6 +867,7 @@
   "minihud.highlighter.gui.search": "Search:",
   "minihud.highlighter.gui.distance": "Highlight distance (blocks):",
   "minihud.highlighter.gui.color_rgba": "Highlight color (R G B A)",
+  "minihud.highlighter.gui.apply": "Apply",
   "minihud.highlighter.gui.draw_fill": "Draw fill: %s",
   "minihud.highlighter.gui.draw_outline": "Draw outline: %s",
   "minihud.highlighter.gui.done": "Done",

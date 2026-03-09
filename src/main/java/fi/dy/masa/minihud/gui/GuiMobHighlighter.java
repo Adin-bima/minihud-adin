@@ -175,6 +175,12 @@ public class GuiMobHighlighter extends GuiBase {
             return true;
         }, TextFieldType.INTEGER);
         this.addWidget(new WidgetLiveColorSwatch(fx, y - 1, 20, 20));
+        fx += 23;
+        ButtonGeneric applyColorBtn = new ButtonGeneric(fx, y - 1, 50, 20, StringUtils.translate("minihud.highlighter.gui.apply"));
+        this.addButton(applyColorBtn, (b, mb) -> {
+            syncColorFromFields();
+            fi.dy.masa.minihud.renderer.OverlayRendererMobHighlighter.INSTANCE.invalidate();
+        });
         y += 24;
 
         // Mob entries
