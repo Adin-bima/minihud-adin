@@ -4,10 +4,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Collections;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -35,6 +34,10 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
 
     private final List<MobHighlightEntry> entries = new ArrayList<>();
     private boolean hasData;
+    /** Cached target entity types for predicate; cleared on invalidate(). */
+    private Set<EntityType<?>> cachedTargetTypes;
+    /** Reused each frame to avoid calling isInFrontOfPlayer twice per entry. */
+    private boolean[] inFrontCache = new boolean[0];
 
     private OverlayRendererMobHighlighter() {
         this.useCulling = false;
@@ -62,6 +65,7 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
 
     public void invalidate() {
         this.lastUpdatePos = null;
+        this.cachedTargetTypes = null;
     }
 
     /** Always update so outlines follow moving mobs (mesh is built from current entity positions). */
@@ -70,16 +74,20 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         return true;
     }
 
-    private static Set<Identifier> getTargetEntityTypeIds() {
-        Set<Identifier> out = new HashSet<>();
-        for (MobEntry e : MobHighlighterConfigs.getEntries()) {
-            if (!e.isEnabled())
-                continue;
-            EntityType<?> type = MobHighlighterConfigs.getEntityTypeFromId(e.getEntityId());
-            if (type != null)
-                out.add(BuiltInRegistries.ENTITY_TYPE.getKey(type));
+    /** Build set of entity types we care about; empty if nothing enabled. Cached and cleared on invalidate(). */
+    private Set<EntityType<?>> getOrCreateCachedTargetTypes() {
+        if (cachedTargetTypes == null) {
+            Set<EntityType<?>> out = new HashSet<>();
+            for (MobEntry e : MobHighlighterConfigs.getEntries()) {
+                if (!e.isEnabled())
+                    continue;
+                EntityType<?> type = MobHighlighterConfigs.getEntityTypeFromId(e.getEntityId());
+                if (type != null)
+                    out.add(type);
+            }
+            cachedTargetTypes = Collections.unmodifiableSet(out);
         }
-        return out;
+        return cachedTargetTypes;
     }
 
     private static Color4f argbToColor4fOutline(int argb) {
@@ -130,8 +138,8 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         if (mc.level == null)
             return;
 
-        Set<Identifier> targetIds = getTargetEntityTypeIds();
-        if (targetIds.isEmpty())
+        Set<EntityType<?>> targetTypes = getOrCreateCachedTargetTypes();
+        if (targetTypes.isEmpty())
             return;
 
         int distance = Math.max(1, MobHighlighterConfigs.HIGHLIGHT_DISTANCE.getIntegerValue());
@@ -140,7 +148,7 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         AABB box = new AABB(
                 entity.getX() - distance, entity.getY() - distance, entity.getZ() - distance,
                 entity.getX() + distance, entity.getY() + distance, entity.getZ() + distance);
-        List<Entity> entities = mc.level.getEntitiesOfClass(Entity.class, box, e -> true);
+        List<Entity> entities = mc.level.getEntitiesOfClass(Entity.class, box, e -> targetTypes.contains(e.getType()));
 
         for (Entity e : entities) {
             if (e == mc.player)
@@ -149,10 +157,6 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
             double dy = e.getY() + e.getBbHeight() * 0.5 - cam.y;
             double dz = e.getZ() - cam.z;
             if (dx * dx + dy * dy + dz * dz > maxDistSq)
-                continue;
-
-            Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(e.getType());
-            if (!targetIds.contains(id))
                 continue;
 
             int argb = 0;
@@ -183,12 +187,15 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         if (entries.isEmpty() || renderObjects.isEmpty())
             return;
 
+        int n = entries.size();
+        if (inFrontCache.length < n)
+            inFrontCache = new boolean[Math.max(n, inFrontCache.length * 2)];
         boolean anyInFront = false;
-        for (MobHighlightEntry e : entries)
-            if (isInFrontOfPlayer(cameraPos, look, e.entity)) {
+        for (int i = 0; i < n; i++) {
+            inFrontCache[i] = isInFrontOfPlayer(cameraPos, look, entries.get(i).entity);
+            if (inFrontCache[i])
                 anyInFront = true;
-                break;
-            }
+        }
         if (!anyInFront)
             return;
 
@@ -196,9 +203,10 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         RenderObjectVbo ctx = renderObjects.get(0);
         BufferBuilder builder = ctx.start(() -> "minihud:mob_highlighter/outlines",
                 MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL);
-        for (MobHighlightEntry e : entries) {
-            if (!isInFrontOfPlayer(cameraPos, look, e.entity))
+        for (int i = 0; i < n; i++) {
+            if (!inFrontCache[i])
                 continue;
+            MobHighlightEntry e = entries.get(i);
             AABB aabb = getInterpolatedAabb(e.entity, partialTick);
             RenderUtils.drawBoxOutlinesAabb(aabb, cameraPos, argbToColor4fOutline(e.argb), this.glLineWidth, builder);
         }
@@ -218,6 +226,7 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         super.reset();
         entries.clear();
         hasData = false;
+        cachedTargetTypes = null;
     }
 
     private static final class MobHighlightEntry {

@@ -34,6 +34,10 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
 
     private final List<BlockHighlightEntry> entries = new ArrayList<>();
     private boolean hasData;
+    /** Cached target block IDs; cleared on invalidate() to avoid rebuilding every update. */
+    private Set<Identifier> cachedTargetBlockIds;
+    /** Reused each frame to avoid per-entry isInFrontOfPlayer repeated calls. */
+    private boolean[] inFrontCache = new boolean[0];
 
     private OverlayRendererBlockHighlighter() {
         this.useCulling = false;
@@ -83,6 +87,7 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
      */
     public void invalidate() {
         this.lastUpdatePos = null;
+        this.cachedTargetBlockIds = null;
     }
 
     @Override
@@ -101,7 +106,7 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
     }
 
     /** Build set of block IDs we care about; empty if nothing enabled. */
-    private static Set<Identifier> getTargetBlockIds() {
+    private static Set<Identifier> buildTargetBlockIds() {
         Set<Identifier> out = new HashSet<>();
         for (OrePreset p : OrePreset.VALUES) {
             if (!p.getToggle().getBooleanValue())
@@ -118,6 +123,12 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
         return out;
     }
 
+    private Set<Identifier> getOrCreateCachedTargetBlockIds() {
+        if (cachedTargetBlockIds == null)
+            cachedTargetBlockIds = buildTargetBlockIds();
+        return cachedTargetBlockIds;
+    }
+
     @Override
     public void update(Vec3 cameraPos, Entity entity, Minecraft mc, ProfilerFiller profiler) {
         entries.clear();
@@ -126,7 +137,7 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
         if (level == null)
             return;
 
-        Set<Identifier> targetIds = getTargetBlockIds();
+        Set<Identifier> targetIds = getOrCreateCachedTargetBlockIds();
         if (targetIds.isEmpty())
             return;
 
@@ -281,11 +292,17 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
     @Override
     public void render(Vec3 cameraPos, Minecraft mc, ProfilerFiller profiler) {
         Vec3 look = mc.player != null ? mc.player.getLookAngle() : Vec3.ZERO;
+        int n = entries.size();
+        if (inFrontCache.length < n)
+            inFrontCache = new boolean[Math.max(n, inFrontCache.length * 2)];
+        for (int i = 0; i < n; i++)
+            inFrontCache[i] = isInFrontOfPlayer(cameraPos, look, entries.get(i).pos);
+
         allocateBuffers(true);
         int idx = 0;
         boolean anyFill = false;
-        for (BlockHighlightEntry e : entries)
-            if (e.drawFill && isInFrontOfPlayer(cameraPos, look, e.pos)) {
+        for (int i = 0; i < n; i++)
+            if (entries.get(i).drawFill && inFrontCache[i]) {
                 anyFill = true;
                 break;
             }
@@ -293,8 +310,9 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
             RenderObjectVbo ctx = renderObjects.get(idx++);
             BufferBuilder builder = ctx.start(() -> "minihud:block_highlighter/quads",
                     MaLiLibPipelines.MINIHUD_SHAPE_NO_DEPTH_OFFSET);
-            for (BlockHighlightEntry e : entries) {
-                if (!e.drawFill || !isInFrontOfPlayer(cameraPos, look, e.pos))
+            for (int i = 0; i < n; i++) {
+                BlockHighlightEntry e = entries.get(i);
+                if (!e.drawFill || !inFrontCache[i])
                     continue;
                 IntBoundingBox bb = new IntBoundingBox(e.pos.getX(), e.pos.getY(), e.pos.getZ(), e.pos.getX(),
                         e.pos.getY(), e.pos.getZ());
@@ -311,8 +329,8 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
             }
         }
         boolean anyOutline = false;
-        for (BlockHighlightEntry e : entries)
-            if (e.drawOutline && isInFrontOfPlayer(cameraPos, look, e.pos)) {
+        for (int i = 0; i < n; i++)
+            if (entries.get(i).drawOutline && inFrontCache[i]) {
                 anyOutline = true;
                 break;
             }
@@ -320,8 +338,9 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
             RenderObjectVbo ctx = renderObjects.get(idx);
             BufferBuilder builder = ctx.start(() -> "minihud:block_highlighter/outlines",
                     MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL);
-            for (BlockHighlightEntry e : entries) {
-                if (!e.drawOutline || !isInFrontOfPlayer(cameraPos, look, e.pos))
+            for (int i = 0; i < n; i++) {
+                BlockHighlightEntry e = entries.get(i);
+                if (!e.drawOutline || !inFrontCache[i])
                     continue;
                 IntBoundingBox bb = new IntBoundingBox(e.pos.getX(), e.pos.getY(), e.pos.getZ(), e.pos.getX(),
                         e.pos.getY(), e.pos.getZ());
@@ -344,6 +363,7 @@ public class OverlayRendererBlockHighlighter extends OverlayRendererBase {
         super.reset();
         entries.clear();
         hasData = false;
+        cachedTargetBlockIds = null;
     }
 
     private static final class BlockHighlightEntry {

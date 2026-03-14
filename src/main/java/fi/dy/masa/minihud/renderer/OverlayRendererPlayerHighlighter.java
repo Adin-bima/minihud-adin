@@ -31,6 +31,8 @@ public class OverlayRendererPlayerHighlighter extends OverlayRendererBase {
 
     private final List<PlayerHighlightEntry> entries = new ArrayList<>();
     private boolean hasData;
+    /** Reused each frame to avoid calling isInFrontOfPlayer twice per entry. */
+    private boolean[] inFrontCache = new boolean[0];
 
     private OverlayRendererPlayerHighlighter() {
         this.useCulling = false;
@@ -118,15 +120,14 @@ public class OverlayRendererPlayerHighlighter extends OverlayRendererBase {
         AABB box = new AABB(
                 entity.getX() - distance, entity.getY() - distance, entity.getZ() - distance,
                 entity.getX() + distance, entity.getY() + distance, entity.getZ() + distance);
-        List<Entity> entities = mc.level.getEntitiesOfClass(Entity.class, box, e -> e instanceof Player);
+        List<Player> entities = mc.level.getEntitiesOfClass(Player.class, box);
 
-        for (Entity e : entities) {
-            if (e == mc.player)
+        for (Player player : entities) {
+            if (player == mc.player)
                 continue;
-            Player player = (Player) e;
-            double dx = e.getX() - cam.x;
-            double dy = e.getY() + e.getBbHeight() * 0.5 - cam.y;
-            double dz = e.getZ() - cam.z;
+            double dx = player.getX() - cam.x;
+            double dy = player.getY() + player.getBbHeight() * 0.5 - cam.y;
+            double dz = player.getZ() - cam.z;
             if (dx * dx + dy * dy + dz * dz > maxDistSq)
                 continue;
 
@@ -165,12 +166,15 @@ public class OverlayRendererPlayerHighlighter extends OverlayRendererBase {
         if (entries.isEmpty() || renderObjects.isEmpty())
             return;
 
+        int n = entries.size();
+        if (inFrontCache.length < n)
+            inFrontCache = new boolean[Math.max(n, inFrontCache.length * 2)];
         boolean anyInFront = false;
-        for (PlayerHighlightEntry e : entries)
-            if (isInFrontOfPlayer(cameraPos, look, e.entity)) {
+        for (int i = 0; i < n; i++) {
+            inFrontCache[i] = isInFrontOfPlayer(cameraPos, look, entries.get(i).entity);
+            if (inFrontCache[i])
                 anyInFront = true;
-                break;
-            }
+        }
         if (!anyInFront)
             return;
 
@@ -178,9 +182,10 @@ public class OverlayRendererPlayerHighlighter extends OverlayRendererBase {
         RenderObjectVbo ctx = renderObjects.get(0);
         BufferBuilder builder = ctx.start(() -> "minihud:player_highlighter/outlines",
                 MaLiLibPipelines.DEBUG_LINES_MASA_SIMPLE_NO_DEPTH_NO_CULL);
-        for (PlayerHighlightEntry e : entries) {
-            if (!isInFrontOfPlayer(cameraPos, look, e.entity))
+        for (int i = 0; i < n; i++) {
+            if (!inFrontCache[i])
                 continue;
+            PlayerHighlightEntry e = entries.get(i);
             AABB aabb = getInterpolatedAabb(e.entity, partialTick);
             RenderUtils.drawBoxOutlinesAabb(aabb, cameraPos, argbToColor4fOutline(e.argb), this.glLineWidth, builder);
         }
