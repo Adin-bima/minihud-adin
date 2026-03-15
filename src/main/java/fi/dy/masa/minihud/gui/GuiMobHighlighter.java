@@ -92,8 +92,9 @@ public class GuiMobHighlighter extends GuiBase {
             x += w + 2;
         }
         y += 2;
+        x = 10;
 
-        // Master enabled
+        // Master enabled and distance: below tab row, left-aligned under Generic
         ButtonOnOff enabledBtn = new ButtonOnOff(x, y, -1, false, "minihud.highlighter.gui.enabled",
                 MobHighlighterConfigs.ENABLED.getBooleanValue());
         this.addButton(enabledBtn, (b, mb) -> {

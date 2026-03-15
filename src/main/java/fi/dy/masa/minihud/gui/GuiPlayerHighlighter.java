@@ -93,7 +93,9 @@ public class GuiPlayerHighlighter extends GuiBase {
             x += w + 2;
         }
         y += 2;
+        x = 10;
 
+        // Enabled and distance: below tab row, left-aligned under Generic
         ButtonOnOff enabledBtn = new ButtonOnOff(x, y, -1, false, "minihud.highlighter.gui.enabled",
                 PlayerHighlighterConfigs.ENABLED.getBooleanValue());
         this.addButton(enabledBtn, (b, mb) -> {
