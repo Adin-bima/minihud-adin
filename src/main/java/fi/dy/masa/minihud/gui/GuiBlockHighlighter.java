@@ -3,8 +3,6 @@ package fi.dy.masa.minihud.gui;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.button.ButtonBase;
 import fi.dy.masa.malilib.gui.button.ButtonGeneric;
@@ -22,12 +20,11 @@ import fi.dy.masa.minihud.gui.GuiConfigs.ConfigGuiTab;
 import net.minecraft.client.Minecraft;
 
 public class GuiBlockHighlighter extends GuiBase {
-    @Nullable
-    private OrePreset selectedPreset = null;
-    private int selectedCustomIndex = -1;
-
-    private GuiTextFieldGeneric rField, gField, bField, aField;
     private final List<GuiTextFieldGeneric> customBlockIdFields = new ArrayList<>();
+
+    public static void setPendingSelectCustomIndex(int index) {
+        // No-op; kept for compatibility when returning from block list
+    }
 
     public GuiBlockHighlighter() {
         this.title = StringUtils.translate("minihud.gui.title.block_highlighter");
@@ -37,64 +34,82 @@ public class GuiBlockHighlighter extends GuiBase {
         return StringUtils.translate(p.getTranslationKey()).replace(": %s", "").trim();
     }
 
-    private void refreshColorEditor() {
-        int r = 0, g = 0, b = 0, a = 255;
-        if (selectedPreset != null) {
-            int argb = selectedPreset.getColorArgb();
-            a = (argb >> 24) & 0xFF;
-            r = (argb >> 16) & 0xFF;
-            g = (argb >> 8) & 0xFF;
-            b = argb & 0xFF;
-        } else if (selectedCustomIndex >= 0 && selectedCustomIndex < HighlighterConfigs.getCustomEntries().size()) {
-            CustomEntry e = HighlighterConfigs.getCustomEntries().get(selectedCustomIndex);
-            r = e.getColorR();
-            g = e.getColorG();
-            b = e.getColorB();
-            a = e.getColorA();
-        }
-        if (rField != null)
-            rField.setValueWrapper(String.valueOf(r));
-        if (gField != null)
-            gField.setValueWrapper(String.valueOf(g));
-        if (bField != null)
-            bField.setValueWrapper(String.valueOf(b));
-        if (aField != null)
-            aField.setValueWrapper(String.valueOf(a));
+    /** Add inline R G B A fields for a preset; apply on change. */
+    private int addPresetColorFields(int rowX, int y, OrePreset preset) {
+        int argb = preset.getColorArgb();
+        int r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF, a = (argb >> 24) & 0xFF;
+        int fw = 28;
+        GuiTextFieldGeneric rF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        rF.setMaxLength(3);
+        rF.setValueWrapper(String.valueOf(r));
+        rowX += fw + 2;
+        GuiTextFieldGeneric gF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        gF.setMaxLength(3);
+        gF.setValueWrapper(String.valueOf(g));
+        rowX += fw + 2;
+        GuiTextFieldGeneric bF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        bF.setMaxLength(3);
+        bF.setValueWrapper(String.valueOf(b));
+        rowX += fw + 2;
+        GuiTextFieldGeneric aF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        aF.setMaxLength(3);
+        aF.setValueWrapper(String.valueOf(a));
+        rowX += fw + 2;
+        this.addTextField(rF, (tf) -> { applyPresetColorFromFields(preset, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(gF, (tf) -> { applyPresetColorFromFields(preset, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(bF, (tf) -> { applyPresetColorFromFields(preset, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(aF, (tf) -> { applyPresetColorFromFields(preset, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addWidget(new WidgetLiveColorSwatch(rowX, y - 1, 18, 18, rF, gF, bF, aF));
+        return rowX + 23;
     }
 
-    private void syncColorFromFields() {
-        if (rField == null || gField == null || bField == null || aField == null)
-            return;
+    private void applyPresetColorFromFields(OrePreset preset, GuiTextFieldGeneric rF, GuiTextFieldGeneric gF,
+            GuiTextFieldGeneric bF, GuiTextFieldGeneric aF) {
         try {
-            int rv = Math.max(0, Math.min(255, Integer.parseInt(rField.getValueWrapper(), 10)));
-            int gv = Math.max(0, Math.min(255, Integer.parseInt(gField.getValueWrapper(), 10)));
-            int bv = Math.max(0, Math.min(255, Integer.parseInt(bField.getValueWrapper(), 10)));
-            int av = Math.max(0, Math.min(255, Integer.parseInt(aField.getValueWrapper(), 10)));
-            if (selectedPreset != null)
-                selectedPreset.getColorOverride().setIntegerValue((av << 24) | (rv << 16) | (gv << 8) | bv);
-            else if (selectedCustomIndex >= 0 && selectedCustomIndex < HighlighterConfigs.getCustomEntries().size()) {
-                CustomEntry e = HighlighterConfigs.getCustomEntries().get(selectedCustomIndex);
-                e.setColorR(rv);
-                e.setColorG(gv);
-                e.setColorB(bv);
-                e.setColorA(av);
-            }
-        } catch (NumberFormatException ignored) {
-        }
+            int rv = Math.max(0, Math.min(255, Integer.parseInt(rF.getValueWrapper(), 10)));
+            int gv = Math.max(0, Math.min(255, Integer.parseInt(gF.getValueWrapper(), 10)));
+            int bv = Math.max(0, Math.min(255, Integer.parseInt(bF.getValueWrapper(), 10)));
+            int av = Math.max(0, Math.min(255, Integer.parseInt(aF.getValueWrapper(), 10)));
+            preset.getColorOverride().setIntegerValue((av << 24) | (rv << 16) | (gv << 8) | bv);
+            fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.INSTANCE.invalidate();
+        } catch (NumberFormatException ignored) { }
     }
 
-    private int getEditedColorArgb() {
-        if (rField == null || gField == null || bField == null || aField == null)
-            return 0xFF000000;
+    /** Add inline R G B A fields for a custom entry; apply on change. */
+    private int addCustomColorFields(int rowX, int y, CustomEntry entry) {
+        GuiTextFieldGeneric rF = new GuiTextFieldGeneric(rowX, y, 28, 16, Minecraft.getInstance().font);
+        rF.setMaxLength(3);
+        rF.setValueWrapper(String.valueOf(entry.getColorR()));
+        rowX += 30;
+        GuiTextFieldGeneric gF = new GuiTextFieldGeneric(rowX, y, 28, 16, Minecraft.getInstance().font);
+        gF.setMaxLength(3);
+        gF.setValueWrapper(String.valueOf(entry.getColorG()));
+        rowX += 30;
+        GuiTextFieldGeneric bF = new GuiTextFieldGeneric(rowX, y, 28, 16, Minecraft.getInstance().font);
+        bF.setMaxLength(3);
+        bF.setValueWrapper(String.valueOf(entry.getColorB()));
+        rowX += 30;
+        GuiTextFieldGeneric aF = new GuiTextFieldGeneric(rowX, y, 28, 16, Minecraft.getInstance().font);
+        aF.setMaxLength(3);
+        aF.setValueWrapper(String.valueOf(entry.getColorA()));
+        rowX += 30;
+        this.addTextField(rF, (tf) -> { applyCustomColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(gF, (tf) -> { applyCustomColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(bF, (tf) -> { applyCustomColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(aF, (tf) -> { applyCustomColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addWidget(new WidgetLiveColorSwatch(rowX, y - 1, 18, 18, rF, gF, bF, aF));
+        return rowX + 23;
+    }
+
+    private void applyCustomColorFromFields(CustomEntry entry, GuiTextFieldGeneric rF, GuiTextFieldGeneric gF,
+            GuiTextFieldGeneric bF, GuiTextFieldGeneric aF) {
         try {
-            int r = Math.max(0, Math.min(255, Integer.parseInt(rField.getValueWrapper(), 10)));
-            int g = Math.max(0, Math.min(255, Integer.parseInt(gField.getValueWrapper(), 10)));
-            int b = Math.max(0, Math.min(255, Integer.parseInt(bField.getValueWrapper(), 10)));
-            int a = Math.max(0, Math.min(255, Integer.parseInt(aField.getValueWrapper(), 10)));
-            return (a << 24) | (r << 16) | (g << 8) | b;
-        } catch (NumberFormatException e) {
-            return 0xFF000000;
-        }
+            entry.setColorR(Math.max(0, Math.min(255, Integer.parseInt(rF.getValueWrapper(), 10))));
+            entry.setColorG(Math.max(0, Math.min(255, Integer.parseInt(gF.getValueWrapper(), 10))));
+            entry.setColorB(Math.max(0, Math.min(255, Integer.parseInt(bF.getValueWrapper(), 10))));
+            entry.setColorA(Math.max(0, Math.min(255, Integer.parseInt(aF.getValueWrapper(), 10))));
+            fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.INSTANCE.invalidate();
+        } catch (NumberFormatException ignored) { }
     }
 
     @Override
@@ -152,51 +167,7 @@ public class GuiBlockHighlighter extends GuiBase {
         }, TextFieldType.INTEGER);
         y += 22;
 
-        // ---- Edit color section (so we have field refs for Edit buttons) ----
-        this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.highlighter.gui.color_rgba"));
-        y += 12;
-        int fx = x;
-        rField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        rField.setMaxLength(3);
-        fx += 40;
-        gField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        gField.setMaxLength(3);
-        fx += 40;
-        bField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        bField.setMaxLength(3);
-        fx += 40;
-        aField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        aField.setMaxLength(3);
-        fx += 42;
-        refreshColorEditor();
-        this.addTextField(rField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(gField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(bField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(aField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        refreshColorEditor();
-        this.addWidget(new WidgetLiveColorSwatch(fx, y - 1, 20, 20));
-        fx += 23;
-        ButtonGeneric applyColorBtn = new ButtonGeneric(fx, y - 1, 50, 20, StringUtils.translate("minihud.highlighter.gui.apply"));
-        this.addButton(applyColorBtn, (b, mb) -> {
-            syncColorFromFields();
-            fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.INSTANCE.invalidate();
-        });
-        y += 24;
-
-        // ---- Ores: per item = small toggle + plain name + swatch + Edit + fill +
-        // outline ----
+        // ---- Ores: per item = toggle + name + swatch + R G B A + fill + outline ----
         this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.highlighter.gui.ores_section"));
         y += 12;
         for (OrePreset p : OrePreset.VALUES) {
@@ -212,15 +183,7 @@ public class GuiBlockHighlighter extends GuiBase {
             rowX += 53;
             this.addLabel(rowX, y + 2, 220, 12, 0xFFFFFFFF, presetDisplayName(preset));
             rowX += 225;
-            this.addWidget(new WidgetColorSwatch(rowX, y, 18, 18, preset.getColorArgb()));
-            rowX += 23;
-            ButtonGeneric editColorBtn = new ButtonGeneric(rowX, y, 28, 18, "...");
-            this.addButton(editColorBtn, (b, mb) -> {
-                selectedPreset = preset;
-                selectedCustomIndex = -1;
-                refreshColorEditor();
-            });
-            rowX += 33;
+            rowX = addPresetColorFields(rowX, y, preset);
             ButtonOnOff fillBtn = new ButtonOnOff(rowX, y, 72, false, "minihud.highlighter.gui.draw_fill",
                     preset.getDrawFill().getBooleanValue());
             this.addButton(fillBtn, (b, mb) -> {
@@ -240,7 +203,7 @@ public class GuiBlockHighlighter extends GuiBase {
         }
         y += 4;
 
-        // ---- Custom blocks ----
+        // ---- Custom blocks: toggle + block id + Pick + swatch + R G B A + fill + outline + Remove ----
         this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.highlighter.gui.custom_blocks"));
         y += 12;
         List<CustomEntry> customEntries = HighlighterConfigs.getCustomEntries();
@@ -255,25 +218,17 @@ public class GuiBlockHighlighter extends GuiBase {
                 fi.dy.masa.minihud.renderer.OverlayRendererBlockHighlighter.INSTANCE.invalidate();
             });
             rowX += 53;
-            GuiTextFieldGeneric blockIdField = new GuiTextFieldGeneric(rowX, y, 160, 17, Minecraft.getInstance().font);
+            GuiTextFieldGeneric blockIdField = new GuiTextFieldGeneric(rowX, y, 180, 17, Minecraft.getInstance().font);
             blockIdField.setMaxLength(256);
             blockIdField.setValueWrapper(e.getBlockId());
             this.addTextField(blockIdField, (tf) -> true, TextFieldType.STRING);
             customBlockIdFields.add(blockIdField);
-            rowX += 165;
-            ButtonGeneric pickBtn = new ButtonGeneric(rowX, y - 1, 70, 20,
+            rowX += 185;
+            ButtonGeneric pickBtn = new ButtonGeneric(rowX, y - 1, 60, 20,
                     StringUtils.translate("minihud.highlighter.gui.pick_block"));
             this.addButton(pickBtn, (b, mb) -> GuiBase.openGui(new GuiBlockHighlighterBlockList(idx)));
-            rowX += 75;
-            this.addWidget(new WidgetColorSwatch(rowX, y, 18, 18, e.getColorArgb()));
-            rowX += 23;
-            ButtonGeneric editColorBtn = new ButtonGeneric(rowX, y, 28, 18, "...");
-            this.addButton(editColorBtn, (b, mb) -> {
-                selectedPreset = null;
-                selectedCustomIndex = idx;
-                refreshColorEditor();
-            });
-            rowX += 33;
+            rowX += 65;
+            rowX = addCustomColorFields(rowX, y, e);
             ButtonOnOff fillBtn = new ButtonOnOff(rowX, y, 72, false, "minihud.highlighter.gui.draw_fill",
                     e.isDrawFill());
             this.addButton(fillBtn, (b, mb) -> {
@@ -294,12 +249,6 @@ public class GuiBlockHighlighter extends GuiBase {
                     StringUtils.translate("minihud.highlighter.gui.remove"));
             this.addButton(removeBtn, (b, mb) -> {
                 HighlighterConfigs.removeCustomEntry(idx);
-                if (selectedCustomIndex == idx) {
-                    selectedCustomIndex = -1;
-                    selectedPreset = null;
-                    refreshColorEditor();
-                } else if (selectedCustomIndex > idx)
-                    selectedCustomIndex--;
                 GuiBase.openGui(new GuiBlockHighlighter());
             });
             y += 20;
@@ -328,7 +277,6 @@ public class GuiBlockHighlighter extends GuiBase {
     }
 
     private void applyFromGui(GuiTextFieldGeneric distanceField) {
-        syncColorFromFields();
         try {
             int d = Integer.parseInt(distanceField.getValueWrapper(), 10);
             HighlighterConfigs.HIGHLIGHT_DISTANCE.setIntegerValue(Math.max(1, Math.min(128, d)));
@@ -382,20 +330,40 @@ public class GuiBlockHighlighter extends GuiBase {
         }
     }
 
-    private class WidgetLiveColorSwatch extends fi.dy.masa.malilib.gui.widgets.WidgetBase {
-        WidgetLiveColorSwatch(int x, int y, int width, int height) {
+    /** Swatch that reads R G B A from the four text fields each frame so preview updates as user types. */
+    private static class WidgetLiveColorSwatch extends fi.dy.masa.malilib.gui.widgets.WidgetBase {
+        private final GuiTextFieldGeneric rF, gF, bF, aF;
+
+        WidgetLiveColorSwatch(int x, int y, int width, int height,
+                GuiTextFieldGeneric rF, GuiTextFieldGeneric gF, GuiTextFieldGeneric bF, GuiTextFieldGeneric aF) {
             super(x, y, width, height);
+            this.rF = rF;
+            this.gF = gF;
+            this.bF = bF;
+            this.aF = aF;
+        }
+
+        private int getArgbFromFields() {
+            try {
+                int r = Math.max(0, Math.min(255, Integer.parseInt(rF.getValueWrapper(), 10)));
+                int g = Math.max(0, Math.min(255, Integer.parseInt(gF.getValueWrapper(), 10)));
+                int b = Math.max(0, Math.min(255, Integer.parseInt(bF.getValueWrapper(), 10)));
+                int a = Math.max(0, Math.min(255, Integer.parseInt(aF.getValueWrapper(), 10)));
+                return (a << 24) | (r << 16) | (g << 8) | b;
+            } catch (NumberFormatException e) {
+                return 0xFF000000;
+            }
         }
 
         @Override
         public void render(fi.dy.masa.malilib.render.GuiContext ctx, int mouseX, int mouseY, boolean selected) {
-            int colorArgb = getEditedColorArgb();
+            int colorArgb = getArgbFromFields();
             RenderUtils.drawRect(ctx, this.x, this.y, this.width, this.height, 0xFF000000);
             float a = ((colorArgb >> 24) & 0xFF) / 255f;
             float r = ((colorArgb >> 16) & 0xFF) / 255f;
             float g = ((colorArgb >> 8) & 0xFF) / 255f;
             float b = (colorArgb & 0xFF) / 255f;
-            fi.dy.masa.malilib.util.data.Color4f c = new Color4f(r, g, b, a);
+            Color4f c = new Color4f(r, g, b, a);
             RenderUtils.drawRect(ctx, this.x + 1, this.y + 1, this.width - 2, this.height - 2, c.intValue);
         }
     }

@@ -43,6 +43,16 @@ public abstract class OverlayRendererBase implements IOverlayRenderer
         }
     }
 
+    /**
+     * Clears render buffers only, without resetting lastUpdatePos.
+     * Use when the renderer has no data to draw so that we do not re-run
+     * the expensive update every frame (needsUpdate stays false until movement).
+     */
+    public void clearBuffersOnly()
+    {
+        this.clearBuffers();
+    }
+
     protected void allocateBuffers()
     {
         this.allocateBuffers(true);

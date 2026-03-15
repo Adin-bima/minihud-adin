@@ -20,65 +20,48 @@ import fi.dy.masa.minihud.config.PlayerHighlighterConfigs.PlayerEntry;
 import fi.dy.masa.minihud.gui.GuiConfigs.ConfigGuiTab;
 
 public class GuiPlayerHighlighter extends GuiBase {
-    private int selectedEntryIndex = -1;
-
-    private GuiTextFieldGeneric rField, gField, bField, aField;
     private final List<GuiTextFieldGeneric> playerNameFields = new ArrayList<>();
 
     public GuiPlayerHighlighter() {
         this.title = StringUtils.translate("minihud.gui.title.player_highlighter");
     }
 
-    private void refreshColorEditor() {
-        int r = 100, g = 200, b = 255, a = 255;
-        if (selectedEntryIndex >= 0 && selectedEntryIndex < PlayerHighlighterConfigs.getEntries().size()) {
-            PlayerEntry e = PlayerHighlighterConfigs.getEntries().get(selectedEntryIndex);
-            r = e.getColorR();
-            g = e.getColorG();
-            b = e.getColorB();
-            a = e.getColorA();
-        }
-        if (rField != null)
-            rField.setValueWrapper(String.valueOf(r));
-        if (gField != null)
-            gField.setValueWrapper(String.valueOf(g));
-        if (bField != null)
-            bField.setValueWrapper(String.valueOf(b));
-        if (aField != null)
-            aField.setValueWrapper(String.valueOf(a));
+    /** Add inline R G B A fields for a player entry; apply on change. Same layout as Block/Mob Highlighter. */
+    private int addEntryColorFields(int rowX, int y, PlayerEntry entry) {
+        int fw = 28;
+        GuiTextFieldGeneric rF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        rF.setMaxLength(3);
+        rF.setValueWrapper(String.valueOf(entry.getColorR()));
+        rowX += fw + 2;
+        GuiTextFieldGeneric gF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        gF.setMaxLength(3);
+        gF.setValueWrapper(String.valueOf(entry.getColorG()));
+        rowX += fw + 2;
+        GuiTextFieldGeneric bF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        bF.setMaxLength(3);
+        bF.setValueWrapper(String.valueOf(entry.getColorB()));
+        rowX += fw + 2;
+        GuiTextFieldGeneric aF = new GuiTextFieldGeneric(rowX, y, fw, 16, Minecraft.getInstance().font);
+        aF.setMaxLength(3);
+        aF.setValueWrapper(String.valueOf(entry.getColorA()));
+        rowX += fw + 2;
+        this.addTextField(rF, (tf) -> { applyEntryColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(gF, (tf) -> { applyEntryColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(bF, (tf) -> { applyEntryColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addTextField(aF, (tf) -> { applyEntryColorFromFields(entry, rF, gF, bF, aF); return true; }, TextFieldType.INTEGER);
+        this.addWidget(new WidgetLiveColorSwatch(rowX, y - 1, 18, 18, rF, gF, bF, aF));
+        return rowX + 23;
     }
 
-    private void syncColorFromFields() {
-        if (rField == null || gField == null || bField == null || aField == null)
-            return;
+    private void applyEntryColorFromFields(PlayerEntry entry, GuiTextFieldGeneric rF, GuiTextFieldGeneric gF,
+            GuiTextFieldGeneric bF, GuiTextFieldGeneric aF) {
         try {
-            int rv = Math.max(0, Math.min(255, Integer.parseInt(rField.getValueWrapper(), 10)));
-            int gv = Math.max(0, Math.min(255, Integer.parseInt(gField.getValueWrapper(), 10)));
-            int bv = Math.max(0, Math.min(255, Integer.parseInt(bField.getValueWrapper(), 10)));
-            int av = Math.max(0, Math.min(255, Integer.parseInt(aField.getValueWrapper(), 10)));
-            if (selectedEntryIndex >= 0 && selectedEntryIndex < PlayerHighlighterConfigs.getEntries().size()) {
-                PlayerEntry e = PlayerHighlighterConfigs.getEntries().get(selectedEntryIndex);
-                e.setColorR(rv);
-                e.setColorG(gv);
-                e.setColorB(bv);
-                e.setColorA(av);
-            }
-        } catch (NumberFormatException ignored) {
-        }
-    }
-
-    private int getEditedColorArgb() {
-        if (rField == null || gField == null || bField == null || aField == null)
-            return 0xFF000000;
-        try {
-            int r = Math.max(0, Math.min(255, Integer.parseInt(rField.getValueWrapper(), 10)));
-            int g = Math.max(0, Math.min(255, Integer.parseInt(gField.getValueWrapper(), 10)));
-            int b = Math.max(0, Math.min(255, Integer.parseInt(bField.getValueWrapper(), 10)));
-            int a = Math.max(0, Math.min(255, Integer.parseInt(aField.getValueWrapper(), 10)));
-            return (a << 24) | (r << 16) | (g << 8) | b;
-        } catch (NumberFormatException e) {
-            return 0xFF000000;
-        }
+            entry.setColorR(Math.max(0, Math.min(255, Integer.parseInt(rF.getValueWrapper(), 10))));
+            entry.setColorG(Math.max(0, Math.min(255, Integer.parseInt(gF.getValueWrapper(), 10))));
+            entry.setColorB(Math.max(0, Math.min(255, Integer.parseInt(bF.getValueWrapper(), 10))));
+            entry.setColorA(Math.max(0, Math.min(255, Integer.parseInt(aF.getValueWrapper(), 10))));
+            fi.dy.masa.minihud.renderer.OverlayRendererPlayerHighlighter.INSTANCE.invalidate();
+        } catch (NumberFormatException ignored) { }
     }
 
     @Override
@@ -140,48 +123,7 @@ public class GuiPlayerHighlighter extends GuiBase {
         this.addLabel(x, y, -1, 12, 0xFFA0A0A0, StringUtils.translate("minihud.gui.mob_highlighter.uses_line_width"));
         y += 18;
 
-        this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.highlighter.gui.color_rgba"));
-        y += 12;
-        int fx = x;
-        rField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        rField.setMaxLength(3);
-        fx += 40;
-        gField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        gField.setMaxLength(3);
-        fx += 40;
-        bField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        bField.setMaxLength(3);
-        fx += 40;
-        aField = new GuiTextFieldGeneric(fx, y, 36, 16, Minecraft.getInstance().font);
-        aField.setMaxLength(3);
-        fx += 42;
-        refreshColorEditor();
-        this.addTextField(rField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(gField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(bField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addTextField(aField, (tf) -> {
-            syncColorFromFields();
-            return true;
-        }, TextFieldType.INTEGER);
-        this.addWidget(new WidgetLiveColorSwatch(fx, y - 1, 20, 20));
-        fx += 23;
-        ButtonGeneric applyColorBtn = new ButtonGeneric(fx, y - 1, 50, 20,
-                StringUtils.translate("minihud.highlighter.gui.apply"));
-        this.addButton(applyColorBtn, (b, mb) -> {
-            syncColorFromFields();
-            fi.dy.masa.minihud.renderer.OverlayRendererPlayerHighlighter.INSTANCE.invalidate();
-        });
-        y += 24;
-
+        // Entries: same layout as Block/Mob Highlighter (left-aligned) — toggle + name + Pick + swatch + R G B A + Remove
         this.addLabel(x, y, -1, 12, 0xFFFFFFFF, StringUtils.translate("minihud.gui.player_highlighter.entries"));
         y += 12;
         List<PlayerEntry> entries = PlayerHighlighterConfigs.getEntries();
@@ -196,32 +138,21 @@ public class GuiPlayerHighlighter extends GuiBase {
                 fi.dy.masa.minihud.renderer.OverlayRendererPlayerHighlighter.INSTANCE.invalidate();
             });
             rowX += 53;
-            GuiTextFieldGeneric nameField = new GuiTextFieldGeneric(rowX, y, 160, 17, Minecraft.getInstance().font);
+            GuiTextFieldGeneric nameField = new GuiTextFieldGeneric(rowX, y, 180, 17, Minecraft.getInstance().font);
             nameField.setMaxLength(64);
             nameField.setValueWrapper(e.getPlayerName());
             this.addTextField(nameField, (tf) -> true, TextFieldType.STRING);
             playerNameFields.add(nameField);
-            rowX += 165;
-            ButtonGeneric pickBtn = new ButtonGeneric(rowX, y - 1, 70, 20,
+            rowX += 185;
+            ButtonGeneric pickBtn = new ButtonGeneric(rowX, y - 1, 60, 20,
                     StringUtils.translate("minihud.gui.player_highlighter.pick"));
             this.addButton(pickBtn, (b, mb) -> GuiBase.openGui(new GuiPlayerHighlighterPlayerList(idx)));
-            rowX += 75;
-            this.addWidget(new WidgetColorSwatch(rowX, y, 18, 18, e.getColorArgb()));
-            rowX += 23;
-            ButtonGeneric editColorBtn = new ButtonGeneric(rowX, y, 28, 18, "...");
-            this.addButton(editColorBtn, (b, mb) -> {
-                selectedEntryIndex = idx;
-                refreshColorEditor();
-            });
-            rowX += 33;
+            rowX += 65;
+            rowX = addEntryColorFields(rowX, y, e);
             ButtonGeneric removeBtn = new ButtonGeneric(rowX, y, 50, 18,
                     StringUtils.translate("minihud.highlighter.gui.remove"));
             this.addButton(removeBtn, (b, mb) -> {
                 PlayerHighlighterConfigs.removeEntry(idx);
-                if (selectedEntryIndex == idx)
-                    selectedEntryIndex = -1;
-                else if (selectedEntryIndex > idx)
-                    selectedEntryIndex--;
                 GuiBase.openGui(new GuiPlayerHighlighter());
             });
             y += 20;
@@ -246,7 +177,6 @@ public class GuiPlayerHighlighter extends GuiBase {
     }
 
     private void applyFromGui(GuiTextFieldGeneric distanceField) {
-        syncColorFromFields();
         try {
             int d = Integer.parseInt(distanceField.getValueWrapper(), 10);
             PlayerHighlighterConfigs.HIGHLIGHT_DISTANCE.setIntegerValue(Math.max(1, Math.min(128, d)));
@@ -301,14 +231,34 @@ public class GuiPlayerHighlighter extends GuiBase {
         }
     }
 
-    private class WidgetLiveColorSwatch extends fi.dy.masa.malilib.gui.widgets.WidgetBase {
-        WidgetLiveColorSwatch(int x, int y, int width, int height) {
+    /** Swatch that reads R G B A from the four text fields each frame so preview updates as user types. */
+    private static class WidgetLiveColorSwatch extends fi.dy.masa.malilib.gui.widgets.WidgetBase {
+        private final GuiTextFieldGeneric rF, gF, bF, aF;
+
+        WidgetLiveColorSwatch(int x, int y, int width, int height,
+                GuiTextFieldGeneric rF, GuiTextFieldGeneric gF, GuiTextFieldGeneric bF, GuiTextFieldGeneric aF) {
             super(x, y, width, height);
+            this.rF = rF;
+            this.gF = gF;
+            this.bF = bF;
+            this.aF = aF;
+        }
+
+        private int getArgbFromFields() {
+            try {
+                int r = Math.max(0, Math.min(255, Integer.parseInt(rF.getValueWrapper(), 10)));
+                int g = Math.max(0, Math.min(255, Integer.parseInt(gF.getValueWrapper(), 10)));
+                int b = Math.max(0, Math.min(255, Integer.parseInt(bF.getValueWrapper(), 10)));
+                int a = Math.max(0, Math.min(255, Integer.parseInt(aF.getValueWrapper(), 10)));
+                return (a << 24) | (r << 16) | (g << 8) | b;
+            } catch (NumberFormatException e) {
+                return 0xFF000000;
+            }
         }
 
         @Override
         public void render(fi.dy.masa.malilib.render.GuiContext ctx, int mouseX, int mouseY, boolean selected) {
-            int colorArgb = getEditedColorArgb();
+            int colorArgb = getArgbFromFields();
             RenderUtils.drawRect(ctx, this.x, this.y, this.width, this.height, 0xFF000000);
             float a = ((colorArgb >> 24) & 0xFF) / 255f;
             float r = ((colorArgb >> 16) & 0xFF) / 255f;

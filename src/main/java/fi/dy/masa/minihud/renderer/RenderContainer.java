@@ -103,6 +103,8 @@ public class RenderContainer {
                             (float) (updatePos.z - cameraPos.z));
                     renderer.draw(cameraPos);
                     matrix4fstack.popMatrix();
+                } else if (renderer instanceof OverlayRendererBase base) {
+                    base.clearBuffersOnly();
                 } else {
                     renderer.reset();
                 }

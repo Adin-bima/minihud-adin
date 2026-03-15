@@ -63,10 +63,15 @@ public class GuiBlockHighlighterBlockList extends GuiListBase<Identifier, Widget
     @Override
     public void onSelectionChange(@Nullable Identifier entry) {
         if (entry != null) {
-            if (customEntryIndex >= 0 && customEntryIndex < HighlighterConfigs.getCustomEntries().size())
+            int targetIndex;
+            if (customEntryIndex >= 0 && customEntryIndex < HighlighterConfigs.getCustomEntries().size()) {
                 HighlighterConfigs.getCustomEntries().get(customEntryIndex).setBlockId(entry.toString());
-            else
+                targetIndex = customEntryIndex;
+            } else {
                 HighlighterConfigs.addCustomEntry().setBlockId(entry.toString());
+                targetIndex = HighlighterConfigs.getCustomEntries().size() - 1;
+            }
+            GuiBlockHighlighter.setPendingSelectCustomIndex(targetIndex);
             GuiBase.openGui(new GuiBlockHighlighter());
         }
     }

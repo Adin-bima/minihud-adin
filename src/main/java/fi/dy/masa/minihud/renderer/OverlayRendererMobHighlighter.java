@@ -7,11 +7,14 @@ import java.util.Set;
 import java.util.Collections;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+
+import fi.dy.masa.malilib.util.position.PositionUtils;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
@@ -68,10 +71,17 @@ public class OverlayRendererMobHighlighter extends OverlayRendererBase {
         this.cachedTargetTypes = null;
     }
 
-    /** Always update so outlines follow moving mobs (mesh is built from current entity positions). */
+    /** When we have targets we update every frame so outlines follow movement; when none, only when player moves. */
     @Override
     public boolean needsUpdate(Entity entity, Minecraft mc) {
-        return true;
+        if (hasData())
+            return true;
+        if (lastUpdatePos == null)
+            return true;
+        BlockPos now = PositionUtils.getEntityBlockPos(entity);
+        return Math.abs(now.getX() - lastUpdatePos.getX()) > 4
+                || Math.abs(now.getY() - lastUpdatePos.getY()) > 4
+                || Math.abs(now.getZ() - lastUpdatePos.getZ()) > 4;
     }
 
     /** Build set of entity types we care about; empty if nothing enabled. Cached and cleared on invalidate(). */

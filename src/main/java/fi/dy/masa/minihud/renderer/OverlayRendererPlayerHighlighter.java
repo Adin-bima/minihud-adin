@@ -7,6 +7,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+
+import fi.dy.masa.malilib.util.position.PositionUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -62,9 +65,17 @@ public class OverlayRendererPlayerHighlighter extends OverlayRendererBase {
         this.lastUpdatePos = null;
     }
 
+    /** When we have targets we update every frame so outlines follow movement; when none, only when player moves. */
     @Override
     public boolean needsUpdate(Entity entity, Minecraft mc) {
-        return true;
+        if (hasData())
+            return true;
+        if (lastUpdatePos == null)
+            return true;
+        BlockPos now = PositionUtils.getEntityBlockPos(entity);
+        return Math.abs(now.getX() - lastUpdatePos.getX()) > 4
+                || Math.abs(now.getY() - lastUpdatePos.getY()) > 4
+                || Math.abs(now.getZ() - lastUpdatePos.getZ()) > 4;
     }
 
     private static Color4f argbToColor4fOutline(int argb) {

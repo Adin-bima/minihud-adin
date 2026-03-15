@@ -551,11 +551,12 @@ public class Configs implements IConfigHandler {
                     .setRenderThrough(Configs.Generic.LIGHT_LEVEL_RENDER_THROUGH.getBooleanValue());
             OverlayRendererStructures.INSTANCE
                     .setRenderThrough(Configs.Generic.STRUCTURES_RENDER_THROUGH.getBooleanValue());
-            fi.dy.masa.minihud.config.HighlighterConfigs.loadFromFile();
-            fi.dy.masa.minihud.config.MobHighlighterConfigs.loadFromFile();
-            fi.dy.masa.minihud.config.PlayerHighlighterConfigs.loadFromFile();
             DebugDataManager.getInstance().onConfigSync();
         }
+        // Always load highlighter configs so custom blocks etc. persist even when main config is missing
+        fi.dy.masa.minihud.config.HighlighterConfigs.loadFromFile();
+        fi.dy.masa.minihud.config.MobHighlighterConfigs.loadFromFile();
+        fi.dy.masa.minihud.config.PlayerHighlighterConfigs.loadFromFile();
     }
 
     public static void saveToFile() {
