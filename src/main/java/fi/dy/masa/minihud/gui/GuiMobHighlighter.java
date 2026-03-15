@@ -91,7 +91,7 @@ public class GuiMobHighlighter extends GuiBase {
             this.addButton(btn, new TabListener(tab));
             x += w + 2;
         }
-        y += 2;
+        y += 22;  // clear tab row (20px) + gap
         x = 10;
 
         // Master enabled and distance: below tab row, left-aligned under Generic
